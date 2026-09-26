@@ -141,3 +141,26 @@ fprintf('%8s| %9.2f %9.2f  [kJ/kg/K]\n','Total S',S1/kJ,S2/kJ);
 fprintf('----------------------------------------------\n%8s| %9.4f %9.4f  [K]\n----------------------------------------------\n','T2-int vs T2-bis',T2int,T2bis);
 %% Here starts your part (compressor,combustor,turbine and nozzle). ...
 % Make a choice for which type of solution method you want to use.
+method = 'bisection';                                                      % or 'interp'. Each stage below is its own file so you can work on them independently.
+
+%% [2-3] Compressor
+v3 = v2;                                                                    % TODO: check/adjust if velocity is not negligible at this stage
+[T3,P3,h2,h3,S2,S3,Wc] = Compressor(T2,P2,v2,v3,SpS,Yair,P3overP2,method);
+
+%% [3-4] Combustor
+dPloss = 0;                                                                 % TODO: set a pressure loss fraction if the case requires it
+[T4,P4,Yprod,h3check,h4] = Combustor(T3,P3,SpS,Yair,Yfuel,AF,dPloss,method);
+
+%% [4-5] Turbine
+mfratio = (mfurate*AF+mfurate)/(mfurate*AF);                               % (air+fuel)/air mass flow ratio
+[T5,P5,h4check,h5,S4,S5] = Turbine(T4,P4,SpS,Yprod,Wc,mfratio,method);
+
+%% [5-6] Nozzle
+[T6,P6,v6,h5check,h6,S5check,S6] = Nozzle(T5,P5,0,SpS,Yprod,Pamb,method);   % TODO: pass the actual inlet velocity v5 instead of 0 if known
+
+%% Print overview of all stations
+fprintf('\n%14s\n','Full cycle');
+fprintf('Stage  ||%9s %9s %9s %9s %9s %9s\n','1','2','3','4','5','6');
+fprintf('-------------------------------------------------------------------\n');
+fprintf('%8s| %9.2f %9.2f %9.2f %9.2f %9.2f %9.2f  [K]\n','Temp',T1,T2,T3,T4,T5,T6);
+fprintf('%8s| %9.2f %9.2f %9.2f %9.2f %9.2f %9.2f  [kPa]\n','Press',P1/kPa,P2/kPa,P3/kPa,P4/kPa,P5/kPa,P6/kPa);
