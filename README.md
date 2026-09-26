@@ -1,1 +1,88 @@
 # ph2000818-jet_engine_52
+
+## Structure
+
+`JetEngineMatlab/Assignment.m` runs the full turbojet cycle station by
+station: [1-2] Diffusor, [2-3] Compressor, [3-4] Combustor, [4-5] Turbine,
+[5-6] Nozzle. The Diffusor is a fully worked example (interpolation and
+bisection methods, side by side). The other four stages are implemented
+as separate, self-contained function files so they can be read, tested,
+or modified independently:
+
+- `Compressor.m` — isentropic compression, `P3` known, solves for `T3`
+- `Combustor.m` — adiabatic combustion (fuel + air -> products), not
+  isentropic; also derives the product composition (`Yprod`) from the
+  fuel's elemental formula (CxHy) and the air-fuel ratio
+- `Turbine.m` — expansion sized by a power balance against the compressor
+  (`Wc`), solves for `T5` then `P5`
+- `Nozzle.m` — isentropic expansion to ambient pressure, solves for `T6`
+  and the exit velocity `v6`
+
+Each of these takes every value it needs as a function argument (no
+`global`s), so one person can work on `Turbine.m` without needing to know
+what `Compressor.m` or `Assignment.m` set up. `General/` is untouched
+course material (NASA polynomial helpers `HNasa`, `SNasa`, `CpNasa`,
+`CvNasa`, `UNasa`, `myfind`) shared by every stage.
+
+## Governing equations
+
+`sthermal(T) = Y·SNasa(T,SpS)'` and `h(T) = Y·HNasa(T,SpS)'` are the
+mixture entropy (temperature-dependent part only) and enthalpy, computed
+from the NASA polynomials for whichever composition `Y` (`Yair`,
+`Yprod`, ...) applies at that stage. `Rg = Runiv/(Y·Mi')` is the mixture's
+specific gas constant. Every stage's total specific entropy is
+`S = sthermal(T) - Rg*ln(P/Pref)`.
+
+**Compressor [2-3]** — isentropic, `P3` known, solve for `T3`:
+```
+P3 = P2 * (P3/P2)
+s3thermal(T3) - s2thermal(T2) = Rg * ln(P3/P2)      -> solve for T3
+Wc = h3 - h2                                         (specific compressor work)
+```
+
+**Combustor [3-4]** — adiabatic, not isentropic; composition changes:
+```
+Stoichiometry (fuel CxHy):  CxHy + (x + y/4) O2  ->  x CO2 + (y/2) H2O
+  nFuel     = 1 / Mfuel                             [kmol fuel / kg fuel]
+  nO2stoich = nFuel * (x + y/4)
+  nCO2      = nFuel * x
+  nH2O      = nFuel * y/2
+  nO2ex     = AF*Yair(O2)/M(O2) - nO2stoich          (must be >= 0: lean mixture)
+  nN2       = AF*Yair(N2)/M(N2)                      (passes through unreacted)
+  Yprod     = [0, nO2ex*M(O2), nCO2*M(CO2), nH2O*M(H2O), nN2*M(N2)] / (1+AF)
+
+Energy balance (adiabatic flame temperature):
+  h3 = (Yfuel*1 + Yair*AF)/(1+AF) · h(T3)
+  Yprod · h(T4) = h3                                 -> solve for T4
+```
+
+**Turbine [4-5]** — sized to exactly drive the compressor, then isentropic:
+```
+Wt = Wc / mfratio                (mfratio = (air+fuel)/air mass flow)
+h5 = h4 - Wt                                         -> solve T5 from Yprod·h(T5) = h5
+s5thermal(T5) - s4thermal(T4) = Rg * ln(P5/P4)       -> solve for P5
+```
+
+**Nozzle [5-6]** — isentropic expansion to ambient pressure:
+```
+P6 = Pamb
+s6thermal(T6) - s5thermal(T5) = Rg * ln(P6/P5)       -> solve for T6
+v6 = sqrt(v5^2 + 2*(h5-h6))                          (energy balance)
+```
+
+Each "solve for T" step is done with either `interp1` on a precomputed
+h(T) or s(T) table, or bisection — selected by the `method` variable in
+`Assignment.m`, exactly mirroring the Diffusor's worked example.
+
+## Case data
+
+The group's case values (fuel, `Tamb`, `P3overP2`, `Pamb`, `mfurate`,
+`AF`, `v1`) live in `JetEngineMatlab/Groep052.txt`, not hardcoded in the
+script. `ReadCaseData.m` parses that file into a struct, and
+`Assignment.m` has a single **export section** near the top that reads
+it and exports every case variable used by the rest of the script
+(including the fuel's `nC`/`nH` composition, needed by `Combustor.m`).
+Running `Assignment.m` prints all of these exported values to the
+console first, so it's clear at a glance which case is loaded. To run a
+different group's case, change `caseFile` in that section — nothing
+else needs to change.
