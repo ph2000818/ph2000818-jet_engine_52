@@ -33,18 +33,28 @@ P4 = P3*(1-dPloss);
 % Species order is {Fuel,O2,CO2,H2O,N2} (matches iSp in Assignment.m).
 iF=1; iO2=2; iCO2=3; iH2O=4; iN2=5;
 
+%% Debug: everything going INTO this stage
+fprintf('\n[Combustor 3-4] ---- inputs ----\n');
+fprintf('  T3 = %9.4f K     P3 = %11.4f Pa    dPloss = %.4f     method = %s\n',T3,P3,dPloss,method);
+fprintf('  AF = %9.4f     Fuel formula: C%gH%g   (nC=%g, nH=%g)\n',AF,nC,nH,nC,nH);
+fprintf('  Yair  : '); for i=1:NSp, fprintf('%s=%.4f  ',SpS(i).Name,Yair(i)); end; fprintf('\n');
+fprintf('  Yfuel : '); for i=1:NSp, fprintf('%s=%.4f  ',SpS(i).Name,Yfuel(i)); end; fprintf('\n');
+
 % Stoichiometric combustion: CxHy + (x+y/4) O2 -> x CO2 + (y/2) H2O
-nFuel      = 1/Mi(iF);                                                     % kmol fuel per kg fuel
-nO2stoich  = nFuel*(nC+nH/4);                                              % kmol O2 needed for complete combustion
+nFuel      = 1/Mi(iF);                                                     % mol fuel per kg fuel
+nO2stoich  = nFuel*(nC+nH/4);                                              % mol O2 needed for complete combustion
 nCO2       = nFuel*nC;
 nH2O       = nFuel*nH/2;
 
-nO2in = AF*Yair(iO2)/Mi(iO2);                                              % kmol O2 supplied (per kg fuel)
-nN2in = AF*Yair(iN2)/Mi(iN2);                                              % kmol N2 supplied (passes through)
-nO2ex = nO2in-nO2stoich;                                                   % kmol excess O2 (unreacted)
+nO2in = AF*Yair(iO2)/Mi(iO2);                                              % mol O2 supplied (per kg fuel)
+nN2in = AF*Yair(iN2)/Mi(iN2);                                              % mol N2 supplied (passes through)
+nO2ex = nO2in-nO2stoich;                                                   % mol excess O2 (unreacted)
 if nO2ex < 0
     error('Combustor:RichMixture','AF is below the stoichiometric ratio; this model assumes complete (lean) combustion');
 end
+
+fprintf('  Stoichiometry (per kg fuel): nFuel=%.4f  nO2stoich=%.4f  nO2supplied=%.4f  nO2excess=%.4f  nN2=%.4f  [mol]\n', ...
+    nFuel,nO2stoich,nO2in,nO2ex,nN2in);
 
 mtotal = 1+AF;                                                             % kg mixture per kg fuel
 Yprod = zeros(1,NSp);
@@ -52,6 +62,8 @@ Yprod(iO2)  = nO2ex*Mi(iO2)/mtotal;
 Yprod(iCO2) = nCO2*Mi(iCO2)/mtotal;
 Yprod(iH2O) = nH2O*Mi(iH2O)/mtotal;
 Yprod(iN2)  = nN2in*Mi(iN2)/mtotal;
+
+fprintf('  Yprod : '); for i=1:NSp, fprintf('%s=%.4f  ',SpS(i).Name,Yprod(i)); end; fprintf('  (sum=%.4f)\n',sum(Yprod));
 
 % Reactants enthalpy (per kg of mixture = 1 kg fuel + AF kg air):
 for i=1:NSp
@@ -91,4 +103,10 @@ for i=1:NSp
     hi4(i) = HNasa(T4,SpS(i));
 end
 h4 = Yprod*hi4';
+
+%% Debug: everything coming OUT of this stage
+fprintf('[Combustor 3-4] ---- outputs ----\n');
+fprintf('  T4 = %9.4f K     P4 = %11.4f Pa\n',T4,P4);
+fprintf('  h3 = %9.4f kJ/kg  h4 = %9.4f kJ/kg   (adiabatic: h4 should equal h3)\n',h3/1e3,h4/1e3);
+fprintf('---------------------------------------------\n');
 end

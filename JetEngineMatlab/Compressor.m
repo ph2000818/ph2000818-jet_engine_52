@@ -12,7 +12,7 @@ function [T3,P3,h2,h3,S2,S3,Wc] = Compressor(T2,P2,v2,v3,SpS,Yair,PRc,method,Run
 %     Yair    - mass fraction vector for air (matches SpS order)
 %     PRc     - compressor pressure ratio, P3/P2
 %     method  - 'interp' or 'bisection' (see Assignment.m Diffusor example)
-%     Runiv,Pref - universal gas constant [kJ/kmol/K], reference pressure [Pa]
+%     Runiv,Pref - universal gas constant [J/(mol*K)], reference pressure [Pa]
 %
 %   Output:
 %     T3,P3   - exit temperature/pressure
@@ -23,6 +23,15 @@ function [T3,P3,h2,h3,S2,S3,Wc] = Compressor(T2,P2,v2,v3,SpS,Yair,PRc,method,Run
 NSp = length(SpS);
 Mi  = [SpS.Mass];
 Rg  = Runiv/(Yair*Mi');
+
+%% Debug: everything going INTO this stage
+fprintf('\n[Compressor 2-3] ---- inputs ----\n');
+fprintf('  T2 = %9.4f K     P2 = %11.4f Pa    v2 = %8.4f m/s   v3 = %8.4f m/s\n',T2,P2,v2,v3);
+fprintf('  PRc(P3/P2) = %8.4f     method = %s\n',PRc,method);
+fprintf('  Runiv = %.6f J/mol/K   Pref = %.4f Pa   Rg = %.6f J/kg/K\n',Runiv,Pref,Rg);
+fprintf('  Yair : ');
+for i=1:NSp, fprintf('%s=%.4f  ',SpS(i).Name,Yair(i)); end
+fprintf('\n');
 
 P3 = P2*PRc;
 
@@ -74,4 +83,12 @@ h3 = Yair*hi3';
 s3thermal = Yair*si3';
 S3 = s3thermal - Rg*log(P3/Pref);
 Wc = h3-h2;
+
+%% Debug: everything coming OUT of this stage
+fprintf('[Compressor 2-3] ---- outputs ----\n');
+fprintf('  starget = %.6f kJ/kg/K   (s2thermal + Rg*ln(P3/P2))\n',starget/1e3);
+fprintf('  T3 = %9.4f K     P3 = %11.4f Pa\n',T3,P3);
+fprintf('  h2 = %9.4f kJ/kg  h3 = %9.4f kJ/kg  Wc = %9.4f kJ/kg\n',h2/1e3,h3/1e3,Wc/1e3);
+fprintf('  S2 = %9.4f kJ/kg/K  S3 = %9.4f kJ/kg/K\n',S2/1e3,S3/1e3);
+fprintf('---------------------------------------------\n');
 end

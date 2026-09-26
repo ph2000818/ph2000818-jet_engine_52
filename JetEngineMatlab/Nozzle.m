@@ -13,7 +13,7 @@ function [T6,P6,v6,h5,h6,S5,S6] = Nozzle(T5,P5,v5,SpS,Yprod,Pamb,method,Runiv,Pr
 %     Yprod   - product mass fractions, order matching SpS
 %     Pamb    - ambient (exit) pressure [Pa]
 %     method  - 'interp' or 'bisection' (see Assignment.m Diffusor example)
-%     Runiv,Pref - universal gas constant [kJ/kmol/K], reference pressure [Pa]
+%     Runiv,Pref - universal gas constant [J/(mol*K)], reference pressure [Pa]
 %
 %   Output:
 %     T6,P6   - exit temperature/pressure (P6 = Pamb)
@@ -26,6 +26,12 @@ Mi  = [SpS.Mass];
 Rg  = Runiv/(Yprod*Mi');
 
 P6 = Pamb;
+
+%% Debug: everything going INTO this stage
+fprintf('\n[Nozzle 5-6] ---- inputs ----\n');
+fprintf('  T5 = %9.4f K     P5 = %11.4f Pa    v5 = %8.4f m/s    Pamb(=P6) = %11.4f Pa    method = %s\n',T5,P5,v5,Pamb,method);
+fprintf('  Runiv = %.6f J/mol/K   Pref = %.4f Pa   Rg = %.6f J/kg/K\n',Runiv,Pref,Rg);
+fprintf('  Yprod : '); for i=1:NSp, fprintf('%s=%.4f  ',SpS(i).Name,Yprod(i)); end; fprintf('\n');
 
 for i=1:NSp
     hi5(i) = HNasa(T5,SpS(i));
@@ -74,4 +80,11 @@ S6 = s6thermal - Rg*log(P6/Pref);
 
 % Energy balance: h5 + 0.5*v5^2 = h6 + 0.5*v6^2
 v6 = sqrt(v5^2 + 2*(h5-h6));
+
+%% Debug: everything coming OUT of this stage
+fprintf('[Nozzle 5-6] ---- outputs ----\n');
+fprintf('  T6 = %9.4f K     P6 = %11.4f Pa    v6 = %9.4f m/s\n',T6,P6,v6);
+fprintf('  h5 = %9.4f kJ/kg  h6 = %9.4f kJ/kg\n',h5/1e3,h6/1e3);
+fprintf('  S5 = %9.4f kJ/kg/K  S6 = %9.4f kJ/kg/K\n',S5/1e3,S6/1e3);
+fprintf('---------------------------------------------\n');
 end
