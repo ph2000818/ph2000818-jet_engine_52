@@ -1,8 +1,9 @@
-function [T3,P3,h2,h3,S2,S3,Wc] = Compressor(T2,P2,v2,v3,SpS,Yair,PRc,method)
+function [T3,P3,h2,h3,S2,S3,Wc] = Compressor(T2,P2,v2,v3,SpS,Yair,PRc,method,Runiv,Pref)
 %COMPRESSOR  Station [2-3]: adiabatic compression of air
 %   Mirrors the Diffusor example in Assignment.m (interpolation/bisection
 %   on the entropy relation), but here P3 is known (P3 = P2*PRc) and T3 is
 %   the unknown solved from the isentropic assumption.
+%   Self-contained: no globals, all dependencies are function arguments.
 %
 %   Input:
 %     T2,P2   - inlet temperature [K] and pressure [Pa]
@@ -11,6 +12,7 @@ function [T3,P3,h2,h3,S2,S3,Wc] = Compressor(T2,P2,v2,v3,SpS,Yair,PRc,method)
 %     Yair    - mass fraction vector for air (matches SpS order)
 %     PRc     - compressor pressure ratio, P3/P2
 %     method  - 'interp' or 'bisection' (see Assignment.m Diffusor example)
+%     Runiv,Pref - universal gas constant [kJ/kmol/K], reference pressure [Pa]
 %
 %   Output:
 %     T3,P3   - exit temperature/pressure
@@ -18,7 +20,6 @@ function [T3,P3,h2,h3,S2,S3,Wc] = Compressor(T2,P2,v2,v3,SpS,Yair,PRc,method)
 %     S2,S3   - inlet/exit total specific entropy [J/kg/K]
 %     Wc      - specific compressor work, Wc = h3-h2 [J/kg]
 
-global Runiv Pref
 NSp = length(SpS);
 Mi  = [SpS.Mass];
 Rg  = Runiv/(Yair*Mi');

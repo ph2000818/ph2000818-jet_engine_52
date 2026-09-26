@@ -20,8 +20,9 @@ function [T4,P4,Yprod,h3,h4] = Combustor(T3,P3,SpS,Yair,Yfuel,AF,dPloss,method)
 %     Yprod   - product mass fraction vector, order matching SpS
 %     h3,h4   - inlet (reactants at T3) / exit (products at T4) specific
 %               enthalpy [J/kg], on a per-kg-of-mixture basis
+%
+%   Self-contained: no globals, all dependencies are function arguments.
 
-global Runiv Pref %#ok<NUSED>
 NSp = length(SpS);
 Mi  = [SpS.Mass];
 

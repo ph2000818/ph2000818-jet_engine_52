@@ -145,7 +145,7 @@ method = 'bisection';                                                      % or 
 
 %% [2-3] Compressor
 v3 = v2;                                                                    % TODO: check/adjust if velocity is not negligible at this stage
-[T3,P3,h2,h3,S2,S3,Wc] = Compressor(T2,P2,v2,v3,SpS,Yair,P3overP2,method);
+[T3,P3,h2,h3,S2,S3,Wc] = Compressor(T2,P2,v2,v3,SpS,Yair,P3overP2,method,Runiv,Pref);
 
 %% [3-4] Combustor
 dPloss = 0;                                                                 % TODO: set a pressure loss fraction if the case requires it
@@ -153,10 +153,10 @@ dPloss = 0;                                                                 % TO
 
 %% [4-5] Turbine
 mfratio = (mfurate*AF+mfurate)/(mfurate*AF);                               % (air+fuel)/air mass flow ratio
-[T5,P5,h4check,h5,S4,S5] = Turbine(T4,P4,SpS,Yprod,Wc,mfratio,method);
+[T5,P5,h4check,h5,S4,S5] = Turbine(T4,P4,SpS,Yprod,Wc,mfratio,method,Runiv,Pref);
 
 %% [5-6] Nozzle
-[T6,P6,v6,h5check,h6,S5check,S6] = Nozzle(T5,P5,0,SpS,Yprod,Pamb,method);   % TODO: pass the actual inlet velocity v5 instead of 0 if known
+[T6,P6,v6,h5check,h6,S5check,S6] = Nozzle(T5,P5,0,SpS,Yprod,Pamb,method,Runiv,Pref);   % TODO: pass the actual inlet velocity v5 instead of 0 if known
 
 %% Print overview of all stations
 fprintf('\n%14s\n','Full cycle');

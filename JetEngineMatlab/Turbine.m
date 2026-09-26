@@ -1,10 +1,11 @@
-function [T5,P5,h4,h5,S4,S5] = Turbine(T4,P4,SpS,Yprod,Wc,mfratio,method)
+function [T5,P5,h4,h5,S4,S5] = Turbine(T4,P4,SpS,Yprod,Wc,mfratio,method,Runiv,Pref)
 %TURBINE  Station [4-5]: adiabatic expansion of combustion gas
 %   The turbine's only job is to drive the compressor, so the specific
 %   turbine work is fixed by a power balance with the compressor. T5
 %   follows from an energy balance, then P5 from the isentropic relation
 %   (same structure as the Diffusor example, but here T5 is found first
 %   and used to get P5, instead of the other way around).
+%   Self-contained: no globals, all dependencies are function arguments.
 %
 %   Input:
 %     T4,P4    - inlet (combustor exit) temperature [K] / pressure [Pa]
@@ -16,13 +17,13 @@ function [T5,P5,h4,h5,S4,S5] = Turbine(T4,P4,SpS,Yprod,Wc,mfratio,method)
 %                needed because turbine work is per kg of gas while Wc is
 %                per kg of air (1 if this correction is ignored)
 %     method   - 'interp' or 'bisection' (see Assignment.m Diffusor example)
+%     Runiv,Pref - universal gas constant [kJ/kmol/K], reference pressure [Pa]
 %
 %   Output:
 %     T5,P5    - exit temperature/pressure
 %     h4,h5    - inlet/exit specific enthalpy [J/kg]
 %     S4,S5    - inlet/exit total specific entropy [J/kg/K]
 
-global Runiv Pref
 NSp = length(SpS);
 Mi  = [SpS.Mass];
 Rg  = Runiv/(Yprod*Mi');

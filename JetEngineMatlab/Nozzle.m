@@ -1,9 +1,10 @@
-function [T6,P6,v6,h5,h6,S5,S6] = Nozzle(T5,P5,v5,SpS,Yprod,Pamb,method)
+function [T6,P6,v6,h5,h6,S5,S6] = Nozzle(T5,P5,v5,SpS,Yprod,Pamb,method,Runiv,Pref)
 %NOZZLE  Station [5-6]: isentropic expansion of combustion gas to ambient pressure
 %   Structurally the same as the Diffusor example in Assignment.m: P6 is
 %   known (=Pamb), T6 is solved from the isentropic relation, and the exit
 %   velocity follows from the energy balance (the reverse role of
 %   T2/v2 in the Diffusor, where velocity was known and T2 was solved for).
+%   Self-contained: no globals, all dependencies are function arguments.
 %
 %   Input:
 %     T5,P5   - inlet (turbine exit) temperature [K] / pressure [Pa]
@@ -12,6 +13,7 @@ function [T6,P6,v6,h5,h6,S5,S6] = Nozzle(T5,P5,v5,SpS,Yprod,Pamb,method)
 %     Yprod   - product mass fractions, order matching SpS
 %     Pamb    - ambient (exit) pressure [Pa]
 %     method  - 'interp' or 'bisection' (see Assignment.m Diffusor example)
+%     Runiv,Pref - universal gas constant [kJ/kmol/K], reference pressure [Pa]
 %
 %   Output:
 %     T6,P6   - exit temperature/pressure (P6 = Pamb)
@@ -19,7 +21,6 @@ function [T6,P6,v6,h5,h6,S5,S6] = Nozzle(T5,P5,v5,SpS,Yprod,Pamb,method)
 %     h5,h6   - inlet/exit specific enthalpy [J/kg]
 %     S5,S6   - inlet/exit total specific entropy [J/kg/K]
 
-global Runiv Pref
 NSp = length(SpS);
 Mi  = [SpS.Mass];
 Rg  = Runiv/(Yprod*Mi');

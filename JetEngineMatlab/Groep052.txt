@@ -1,0 +1,9 @@
+Groep  52
+Data 
+           Fuel :        H2
+       Tamb [K] :    300.00
+   P3overP2 [-] :      7.00
+      Pamb [Pa] : 100000.00
+ mfurate [kg/s] :      0.58
+         AF [-] :    170.35
+       v1 [m/s] :    200.00
