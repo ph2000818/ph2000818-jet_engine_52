@@ -1,9 +1,10 @@
-function [T4,P4,Yprod,h3,h4] = Combustor(T3,P3,SpS,Yair,Yfuel,AF,dPloss,method)
+function [T4,P4,Yprod,h3,h4] = Combustor(T3,P3,SpS,Yair,Yfuel,AF,dPloss,method,nC,nH)
 %COMBUSTOR  Station [3-4]: constant-(approx.)pressure combustion of fuel in air
 %   Unlike Diffusor/Compressor/Turbine/Nozzle, this stage is NOT isentropic
 %   and the species composition changes (air+fuel -> combustion products).
 %   T4 follows from an adiabatic energy balance between reactants (air at
 %   T3 + fuel) and products (at T4), not from an entropy relation.
+%   Self-contained: no globals, all dependencies are function arguments.
 %
 %   Input:
 %     T3,P3   - inlet (compressor exit) temperature [K] / pressure [Pa]
@@ -14,14 +15,15 @@ function [T4,P4,Yprod,h3,h4] = Combustor(T3,P3,SpS,Yair,Yfuel,AF,dPloss,method)
 %     AF      - air-to-fuel mass ratio
 %     dPloss  - fractional pressure loss across combustor (0 if ignored)
 %     method  - 'interp' or 'bisection', for solving T4 from the energy balance
+%     nC,nH   - fuel elemental composition CxHy (e.g. 8,18 for isooctane
+%               "Gasoline"; 0,2 for H2). Set in Assignment.m's export
+%               section, alongside cFuel, so both stay in sync.
 %
 %   Output:
 %     T4,P4   - exit temperature/pressure
 %     Yprod   - product mass fraction vector, order matching SpS
 %     h3,h4   - inlet (reactants at T3) / exit (products at T4) specific
 %               enthalpy [J/kg], on a per-kg-of-mixture basis
-%
-%   Self-contained: no globals, all dependencies are function arguments.
 
 NSp = length(SpS);
 Mi  = [SpS.Mass];
@@ -31,9 +33,7 @@ P4 = P3*(1-dPloss);
 % Species order is {Fuel,O2,CO2,H2O,N2} (matches iSp in Assignment.m).
 iF=1; iO2=2; iCO2=3; iH2O=4; iN2=5;
 
-% Stoichiometry: fuel modeled as isooctane C8H18 (standard "Gasoline"
-% surrogate). Adjust nC,nH below if your case uses a different fuel.
-nC = 8; nH = 18;
+% Stoichiometric combustion: CxHy + (x+y/4) O2 -> x CO2 + (y/2) H2O
 nFuel      = 1/Mi(iF);                                                     % kmol fuel per kg fuel
 nO2stoich  = nFuel*(nC+nH/4);                                              % kmol O2 needed for complete combustion
 nCO2       = nFuel*nC;

@@ -14,10 +14,49 @@ Pref=1.01235e5; % Reference pressure, 1 atm!
 Tref=298.15;    % Reference Temperature
 %% Some convenient units
 kJ=1e3;kmol=1e3;dm=0.1;bara=1e5;kPa = 1000;kN=1000;kg=1;s=1;
-%% Given conditions. 
-%  For the final assignment take the ones from the specific case you are supposed to do.                  
-v1=200;Tamb=250;P3overP2=7;Pamb=45*kPa;mfurate=0.68*kg/s;AF=75;             % These are the ones from the book
-cFuel='Gasoline';                                                           % Pick Gasoline as the fuel (other choices check Sp.Name)
+%% ===================== EXPORT SECTION =====================
+%  All case-specific values live here and ONLY here. They are read from
+%  the group's case file (values already in SI units) and exported as
+%  named variables used throughout the rest of the script. To run a
+%  different case, point caseFile at a different Groep0XX.txt - nothing
+%  else in this script needs to change.
+caseFile = 'Groep052.txt';
+Case = ReadCaseData(caseFile);
+
+cFuel    = Case.Fuel;                                                       % Fuel name (must match an entry in Sp.Name)
+Tamb     = Case.Tamb;                                                       % Ambient temperature [K]
+P3overP2 = Case.P3overP2;                                                   % Compressor pressure ratio [-]
+Pamb     = Case.Pamb;                                                       % Ambient pressure [Pa]
+mfurate  = Case.mfurate;                                                    % Fuel mass flow rate [kg/s]
+AF       = Case.AF;                                                         % Air-to-fuel mass ratio [-]
+v1       = Case.v1;                                                         % Inlet (flight) velocity [m/s]
+
+% Fuel elemental composition CxHy, needed by Combustor.m for the
+% combustion stoichiometry. Add a case here if you ever change fuel.
+switch cFuel
+    case 'Gasoline'
+        nCfuel = 8;  nHfuel = 18;                                           % isooctane C8H18 surrogate
+    case 'H2'
+        nCfuel = 0;  nHfuel = 2;                                            % hydrogen
+    otherwise
+        error('Assignment:UnknownFuel','No combustion stoichiometry (nC,nH) defined for fuel "%s"',cFuel);
+end
+
+% Print every exported value so it's clear at a glance what case is loaded.
+fprintf('\n%14s\n','Exported case data');
+fprintf('-------------------------------------------------\n');
+fprintf('%12s: %s\n','caseFile',caseFile);
+fprintf('%12s: %s\n','cFuel',cFuel);
+fprintf('%12s: %10.4f  [K]\n','Tamb',Tamb);
+fprintf('%12s: %10.4f  [-]\n','P3overP2',P3overP2);
+fprintf('%12s: %10.4f  [Pa]\n','Pamb',Pamb);
+fprintf('%12s: %10.4f  [kg/s]\n','mfurate',mfurate);
+fprintf('%12s: %10.4f  [-]\n','AF',AF);
+fprintf('%12s: %10.4f  [m/s]\n','v1',v1);
+fprintf('%12s: %10d  [-]\n','nCfuel',nCfuel);
+fprintf('%12s: %10d  [-]\n','nHfuel',nHfuel);
+fprintf('-------------------------------------------------\n\n');
+%% ============================================================
 %% Select species for the case at hand
 iSp = myfind({Sp.Name},{cFuel,'O2','CO2','H2O','N2'});                      % Find indexes of these species
 SpS=Sp(iSp);                                                                % Subselection of the database in the order according to {'Gasoline','O2','CO2','H2O','N2'}
@@ -149,7 +188,7 @@ v3 = v2;                                                                    % TO
 
 %% [3-4] Combustor
 dPloss = 0;                                                                 % TODO: set a pressure loss fraction if the case requires it
-[T4,P4,Yprod,h3check,h4] = Combustor(T3,P3,SpS,Yair,Yfuel,AF,dPloss,method);
+[T4,P4,Yprod,h3check,h4] = Combustor(T3,P3,SpS,Yair,Yfuel,AF,dPloss,method,nCfuel,nHfuel);
 
 %% [4-5] Turbine
 mfratio = (mfurate*AF+mfurate)/(mfurate*AF);                               % (air+fuel)/air mass flow ratio
