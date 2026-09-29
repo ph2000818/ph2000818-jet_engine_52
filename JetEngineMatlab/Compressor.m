@@ -23,7 +23,7 @@ function [T3,P3,h2,h3,S2,S3,Wc] = Compressor(T2,P2,v2,v3,SpS,Yair,PRc,method,Run
 
 NSp = length(SpS);
 Mi  = [SpS.Mass];
-Rg  = Runiv/(Yair*Mi');
+Rg  = Runiv*sum(Yair./Mi);                                                 % Mixture gas constant: 1/Mmix = sum(Y_i/M_i)
 
 %% Debug: everything going INTO this stage
 fprintf('\n[Compressor 2-3] ---- inputs ----\n');

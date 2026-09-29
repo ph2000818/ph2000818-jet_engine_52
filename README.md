@@ -29,7 +29,7 @@ course material (NASA polynomial helpers `HNasa`, `SNasa`, `CpNasa`,
 `sthermal(T) = Y·SNasa(T,SpS)'` and `h(T) = Y·HNasa(T,SpS)'` are the
 mixture entropy (temperature-dependent part only) and enthalpy, computed
 from the NASA polynomials for whichever composition `Y` (`Yair`,
-`Yprod`, ...) applies at that stage. `Rg = Runiv/(Y·Mi')` is the mixture's
+`Yprod`, ...) applies at that stage. `Rg = Runiv·sum(Y./Mi)` (i.e. `Runiv/Mmix` with `1/Mmix = sum(Y_i/M_i)`) is the mixture's
 specific gas constant. Every stage's total specific entropy is
 `S = sthermal(T) - Rg*ln(P/Pref)`.
 
