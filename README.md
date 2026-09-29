@@ -37,7 +37,7 @@ specific gas constant. Every stage's total specific entropy is
 ```
 P3 = P2 * (P3/P2)
 s3thermal(T3) - s2thermal(T2) = Rg * ln(P3/P2)      -> solve for T3
-Wc = h3 - h2                                         (specific compressor work)
+Wc = (h3 - h2) + 0.5*(v3^2 - v2^2)                   (specific compressor work, per kg air)
 ```
 
 **Combustor [3-4]** — adiabatic, not isentropic; composition changes:
@@ -52,8 +52,8 @@ Stoichiometry (fuel CxHy):  CxHy + (x + y/4) O2  ->  x CO2 + (y/2) H2O
   Yprod     = [0, nO2ex*M(O2), nCO2*M(CO2), nH2O*M(H2O), nN2*M(N2)] / (1+AF)
 
 Energy balance (adiabatic flame temperature):
-  h3 = (Yfuel*1 + Yair*AF)/(1+AF) · h(T3)
-  Yprod · h(T4) = h3                                 -> solve for T4
+  h3mix = (Yfuel*1 + Yair*AF)/(1+AF) · h(T3)         (air+fuel mixture, NOT the compressor's h3)
+  Yprod · h(T4) = h3mix                              -> solve for T4
 ```
 
 **Turbine [4-5]** — sized to exactly drive the compressor, then isentropic:
@@ -69,6 +69,22 @@ P6 = Pamb
 s6thermal(T6) - s5thermal(T5) = Rg * ln(P6/P5)       -> solve for T6
 v6 = sqrt(v5^2 + 2*(h5-h6))                          (energy balance)
 ```
+Velocities inside the engine are negligible, as in Turns: `v2 = v3 = v4
+= v5 = 0`. `Turbine.m` assumes no kinetic energy change, so `v5 = v4`.
+
+**Performance** — computed at the end of `Assignment.m`:
+```
+mair = mfurate*AF,   mgas = mair + mfurate
+F    = mgas*v6 - mair*v1                             (thrust; (P6-Pamb)*A6 = 0)
+TSFC = mfurate / F
+dHcomb = [(Yfuel + AF*Yair) - (1+AF)*Yprod] · h(Tref)   (per kg fuel, from NASA data)
+eta_th   = (0.5*mgas*v6^2 - 0.5*mair*v1^2) / (mfurate*dHcomb)
+eta_prop = F*v1 / (0.5*mgas*v6^2 - 0.5*mair*v1^2)
+eta_tot  = eta_th * eta_prop
+```
+The final table prints T, P, v, h and S for every station, followed by
+the performance block. h and S at stations 1-3 are per kg air, at 4-6
+per kg combustion gas.
 
 Each "solve for T" step is done with either `interp1` on a precomputed
 h(T) or s(T) table, or bisection — selected by the `method` variable in
