@@ -183,19 +183,40 @@ fprintf('----------------------------------------------\n%8s| %9.4f %9.4f  [K]\n
 method = 'bisection';                                                      % or 'interp'. Each stage below is its own file so you can work on them independently.
 
 %% [2-3] Compressor
-v3 = v2;                                                                    % TODO: check/adjust if velocity is not negligible at this stage
+v3 = v2;                                                                    % Velocity inside the engine is negligible (as in Turns)
 [T3,P3,h2,h3,S2,S3,Wc] = Compressor(T2,P2,v2,v3,SpS,Yair,P3overP2,method,Runiv,Pref);
 
 %% [3-4] Combustor
 dPloss = 0;                                                                 % TODO: set a pressure loss fraction if the case requires it
-[T4,P4,Yprod,h3check,h4] = Combustor(T3,P3,SpS,Yair,Yfuel,AF,dPloss,method,nCfuel,nHfuel);
+v4 = v3;                                                                    % No velocity change across the combustor
+[T4,P4,Yprod,h3mix,h4] = Combustor(T3,P3,SpS,Yair,Yfuel,AF,dPloss,method,nCfuel,nHfuel);   % h3mix: air+fuel mixture, not the compressor's h3
 
 %% [4-5] Turbine
+v5 = v4;                                                                    % Turbine.m's energy balance assumes no kinetic energy change (v5 = v4)
 mfratio = (mfurate*AF+mfurate)/(mfurate*AF);                               % (air+fuel)/air mass flow ratio
 [T5,P5,h4check,h5,S4,S5] = Turbine(T4,P4,SpS,Yprod,Wc,mfratio,method,Runiv,Pref);
 
 %% [5-6] Nozzle
-[T6,P6,v6,h5check,h6,S5check,S6] = Nozzle(T5,P5,0,SpS,Yprod,Pamb,method,Runiv,Pref);   % TODO: pass the actual inlet velocity v5 instead of 0 if known
+[T6,P6,v6,h5check,h6,S5check,S6] = Nozzle(T5,P5,v5,SpS,Yprod,Pamb,method,Runiv,Pref);
+
+%% Engine performance
+mair = mfurate*AF;                                                          % Air mass flow rate [kg/s]
+mgas = mair+mfurate;                                                        % Exhaust gas mass flow rate [kg/s]
+F    = mgas*v6 - mair*v1;                                                   % Thrust from momentum balance; pressure thrust (P6-Pamb)*A6 = 0 since P6 = Pamb
+Fspec = F/mair;                                                             % Specific thrust [N/(kg/s)]
+TSFC  = mfurate/F;                                                          % Thrust-specific fuel consumption [kg/(N s)]
+% Heat of combustion straight from the NASA database: reactants minus
+% products, both at Tref (no tabulated LHV needed)
+for i=1:NSp
+    hiref(i) = HNasa(Tref,SpS(i));
+end
+dHcomb = (Yfuel + AF*Yair)*hiref' - (1+AF)*Yprod*hiref';                   % [J/kg fuel]
+Qin    = mfurate*dHcomb;                                                    % Chemical power released [W]
+dEkin  = 0.5*mgas*v6^2 - 0.5*mair*v1^2;                                     % Kinetic energy gain of the flow [W]
+Pprop  = F*v1;                                                              % Propulsive power [W]
+eta_th   = dEkin/Qin;                                                       % Thermal efficiency
+eta_prop = Pprop/dEkin;                                                     % Propulsive efficiency
+eta_tot  = Pprop/Qin;                                                       % Overall efficiency = eta_th*eta_prop
 
 %% Print overview of all stations
 fprintf('\n%14s\n','Full cycle');
@@ -203,3 +224,23 @@ fprintf('Stage  ||%9s %9s %9s %9s %9s %9s\n','1','2','3','4','5','6');
 fprintf('-------------------------------------------------------------------\n');
 fprintf('%8s| %9.2f %9.2f %9.2f %9.2f %9.2f %9.2f  [K]\n','Temp',T1,T2,T3,T4,T5,T6);
 fprintf('%8s| %9.2f %9.2f %9.2f %9.2f %9.2f %9.2f  [kPa]\n','Press',P1/kPa,P2/kPa,P3/kPa,P4/kPa,P5/kPa,P6/kPa);
+fprintf('%8s| %9.2f %9.2f %9.2f %9.2f %9.2f %9.2f  [m/s]\n','v',v1,v2,v3,v4,v5,v6);
+fprintf('---  H/S    -------------------------------------------------------\n');
+fprintf('%8s| %9.2f %9.2f %9.2f %9.2f %9.2f %9.2f  [kJ/kg]\n','h',h1/kJ,h2/kJ,h3/kJ,h4/kJ,h5/kJ,h6/kJ);
+fprintf('%8s| %9.4f %9.4f %9.4f %9.4f %9.4f %9.4f  [kJ/kg/K]\n','Total S',S1/kJ,S2/kJ,S3/kJ,S4/kJ,S5/kJ,S6/kJ);
+fprintf('  (h,S at stations 1-3 are per kg air, 4-6 per kg combustion gas)\n');
+
+%% Print engine performance
+fprintf('\n%14s\n','Performance');
+fprintf('-------------------------------------------------\n');
+fprintf('%12s: %10.4f  [kg/s]\n','mair',mair);
+fprintf('%12s: %10.4f  [kg/s]\n','mgas',mgas);
+fprintf('%12s: %10.4f  [kJ/kg air]\n','Wc',Wc/kJ);
+fprintf('%12s: %10.4f  [MJ/kg fuel]\n','dHcomb',dHcomb/1e6);
+fprintf('%12s: %10.4f  [kN]\n','Thrust F',F/kN);
+fprintf('%12s: %10.4f  [N/(kg/s)]\n','F/mair',Fspec);
+fprintf('%12s: %10.4f  [g/(kN s)]\n','TSFC',TSFC*1e6);
+fprintf('%12s: %10.4f  [-]\n','eta_th',eta_th);
+fprintf('%12s: %10.4f  [-]\n','eta_prop',eta_prop);
+fprintf('%12s: %10.4f  [-]\n','eta_tot',eta_tot);
+fprintf('-------------------------------------------------\n');
