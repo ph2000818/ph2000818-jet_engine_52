@@ -23,7 +23,7 @@ function [T6,P6,v6,h5,h6,S5,S6] = Nozzle(T5,P5,v5,SpS,Yprod,Pamb,method,Runiv,Pr
 
 NSp = length(SpS);
 Mi  = [SpS.Mass];
-Rg  = Runiv/(Yprod*Mi');
+Rg  = Runiv*sum(Yprod./Mi);                                                % Mixture gas constant: 1/Mmix = sum(Y_i/M_i)
 
 P6 = Pamb;
 

@@ -26,7 +26,7 @@ function [T5,P5,h4,h5,S4,S5] = Turbine(T4,P4,SpS,Yprod,Wc,mfratio,method,Runiv,P
 
 NSp = length(SpS);
 Mi  = [SpS.Mass];
-Rg  = Runiv/(Yprod*Mi');
+Rg  = Runiv*sum(Yprod./Mi);                                                % Mixture gas constant: 1/Mmix = sum(Y_i/M_i)
 
 %% Debug: everything going INTO this stage
 fprintf('\n[Turbine 4-5] ---- inputs ----\n');

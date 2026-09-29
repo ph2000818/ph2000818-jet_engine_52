@@ -1,4 +1,4 @@
-function [T4,P4,Yprod,h3,h4] = Combustor(T3,P3,SpS,Yair,Yfuel,AF,dPloss,method,nC,nH)
+function [T4,P4,Yprod,h3mix,h4] = Combustor(T3,P3,SpS,Yair,Yfuel,AF,dPloss,method,nC,nH)
 %COMBUSTOR  Station [3-4]: constant-(approx.)pressure combustion of fuel in air
 %   Unlike Diffusor/Compressor/Turbine/Nozzle, this stage is NOT isentropic
 %   and the species composition changes (air+fuel -> combustion products).
@@ -22,8 +22,10 @@ function [T4,P4,Yprod,h3,h4] = Combustor(T3,P3,SpS,Yair,Yfuel,AF,dPloss,method,n
 %   Output:
 %     T4,P4   - exit temperature/pressure
 %     Yprod   - product mass fraction vector, order matching SpS
-%     h3,h4   - inlet (reactants at T3) / exit (products at T4) specific
-%               enthalpy [J/kg], on a per-kg-of-mixture basis
+%     h3mix   - enthalpy of the reactant mixture (air + fuel, both at T3)
+%               [J/kg mixture]. NOT the same as the compressor's h3, which
+%               is per kg of air only
+%     h4      - enthalpy of the products at T4 [J/kg mixture]
 
 NSp = length(SpS);
 Mi  = [SpS.Mass];
@@ -65,13 +67,13 @@ Yprod(iN2)  = nN2in*Mi(iN2)/mtotal;
 
 fprintf('  Yprod : '); for i=1:NSp, fprintf('%s=%.4f  ',SpS(i).Name,Yprod(i)); end; fprintf('  (sum=%.4f)\n',sum(Yprod));
 
-% Reactants enthalpy (per kg of mixture = 1 kg fuel + AF kg air):
+% Reactant mixture enthalpy (per kg of mixture = 1 kg fuel + AF kg air):
 for i=1:NSp
     hi3(i) = HNasa(T3,SpS(i));
 end
-h3 = (Yfuel*1 + Yair*AF)*hi3'/mtotal;
+h3mix = (Yfuel*1 + Yair*AF)*hi3'/mtotal;
 
-% Adiabatic energy balance: h_products(T4) = h3
+% Adiabatic energy balance: h_products(T4) = h3mix
 switch method
     case 'interp'
         TRl = 200:1:3000;
@@ -79,7 +81,7 @@ switch method
             hia(:,i) = HNasa(TRl,SpS(i));
         end
         hthermal_a = Yprod*hia';
-        T4 = interp1(hthermal_a,TRl,h3);
+        T4 = interp1(hthermal_a,TRl,h3mix);
     case 'bisection'
         TL = T3; TH = 3000;                                                % combustion only raises the temperature
         while abs(TH-TL) > 0.01
@@ -88,7 +90,7 @@ switch method
                 hii(i) = HNasa(Ti,SpS(i));
             end
             hi = Yprod*hii';
-            if hi > h3
+            if hi > h3mix
                 TH = Ti;
             else
                 TL = Ti;
@@ -107,6 +109,6 @@ h4 = Yprod*hi4';
 %% Debug: everything coming OUT of this stage
 fprintf('[Combustor 3-4] ---- outputs ----\n');
 fprintf('  T4 = %9.4f K     P4 = %11.4f Pa\n',T4,P4);
-fprintf('  h3 = %9.4f kJ/kg  h4 = %9.4f kJ/kg   (adiabatic: h4 should equal h3)\n',h3/1e3,h4/1e3);
+fprintf('  h3mix = %9.4f kJ/kg  h4 = %9.4f kJ/kg   (adiabatic: h4 should equal h3mix)\n',h3mix/1e3,h4/1e3);
 fprintf('---------------------------------------------\n');
 end
