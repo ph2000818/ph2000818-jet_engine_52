@@ -1,13 +1,14 @@
-function [T4,P4,Yprod,h3mix,h4] = Combustor(T3,P3,SpS,Yair,Yfuel,AF,dPloss,method,nC,nH)
+function [T4,P4,Yprod,h3mix,h4] = Combustor(T3,P3,Tfuel,SpS,Yair,Yfuel,AF,dPloss,method,nC,nH)
 %COMBUSTOR  Station [3-4]: constant-(approx.)pressure combustion of fuel in air
 %   Unlike Diffusor/Compressor/Turbine/Nozzle, this stage is NOT isentropic
 %   and the species composition changes (air+fuel -> combustion products).
 %   T4 follows from an adiabatic energy balance between reactants (air at
-%   T3 + fuel) and products (at T4), not from an entropy relation.
+%   T3 + fuel at Tfuel) and products (at T4), not from an entropy relation.
 %   Self-contained: no globals, all dependencies are function arguments.
 %
 %   Input:
 %     T3,P3   - inlet (compressor exit) temperature [K] / pressure [Pa]
+%     Tfuel   - temperature at which the fuel enters the combustor [K]
 %     SpS     - NASA species struct array, order {Fuel,O2,CO2,H2O,N2}
 %               (matches iSp = myfind({Sp.Name},{cFuel,'O2','CO2','H2O','N2'}) in Assignment.m)
 %     Yair    - air mass fractions, order matching SpS
@@ -15,14 +16,14 @@ function [T4,P4,Yprod,h3mix,h4] = Combustor(T3,P3,SpS,Yair,Yfuel,AF,dPloss,metho
 %     AF      - air-to-fuel mass ratio
 %     dPloss  - fractional pressure loss across combustor (0 if ignored)
 %     method  - 'interp' or 'bisection', for solving T4 from the energy balance
-%     nC,nH   - fuel elemental composition CxHy (e.g. 8,18 for isooctane
-%               "Gasoline"; 0,2 for H2). Set in Assignment.m's export
-%               section, alongside cFuel, so both stay in sync.
+%     nC,nH   - fuel elemental composition CxHy (e.g. 7.76,13.1 for
+%               "Gasoline"; 0,2 for H2). Read from the fuel's database
+%               entry (Sp.Elcomp) in Assignment.m's export section.
 %
 %   Output:
 %     T4,P4   - exit temperature/pressure
 %     Yprod   - product mass fraction vector, order matching SpS
-%     h3mix   - enthalpy of the reactant mixture (air + fuel, both at T3)
+%     h3mix   - enthalpy of the reactants (air at T3 + fuel at Tfuel)
 %               [J/kg mixture]. NOT the same as the compressor's h3, which
 %               is per kg of air only
 %     h4      - enthalpy of the products at T4 [J/kg mixture]
@@ -37,7 +38,7 @@ iF=1; iO2=2; iCO2=3; iH2O=4; iN2=5;
 
 %% Debug: everything going INTO this stage
 fprintf('\n[Combustor 3-4] ---- inputs ----\n');
-fprintf('  T3 = %9.4f K     P3 = %11.4f Pa    dPloss = %.4f     method = %s\n',T3,P3,dPloss,method);
+fprintf('  T3 = %9.4f K     P3 = %11.4f Pa    Tfuel = %9.4f K    dPloss = %.4f     method = %s\n',T3,P3,Tfuel,dPloss,method);
 fprintf('  AF = %9.4f     Fuel formula: C%gH%g   (nC=%g, nH=%g)\n',AF,nC,nH,nC,nH);
 fprintf('  Yair  : '); for i=1:NSp, fprintf('%s=%.4f  ',SpS(i).Name,Yair(i)); end; fprintf('\n');
 fprintf('  Yfuel : '); for i=1:NSp, fprintf('%s=%.4f  ',SpS(i).Name,Yfuel(i)); end; fprintf('\n');
@@ -67,11 +68,13 @@ Yprod(iN2)  = nN2in*Mi(iN2)/mtotal;
 
 fprintf('  Yprod : '); for i=1:NSp, fprintf('%s=%.4f  ',SpS(i).Name,Yprod(i)); end; fprintf('  (sum=%.4f)\n',sum(Yprod));
 
-% Reactant mixture enthalpy (per kg of mixture = 1 kg fuel + AF kg air):
+% Reactant enthalpy (per kg of mixture = 1 kg fuel + AF kg air):
+% the air enters at T3 (compressor exit), the fuel at its own temperature Tfuel
 for i=1:NSp
     hi3(i) = HNasa(T3,SpS(i));
+    hiF(i) = HNasa(Tfuel,SpS(i));
 end
-h3mix = (Yfuel*1 + Yair*AF)*hi3'/mtotal;
+h3mix = (Yfuel*hiF'*1 + Yair*hi3'*AF)/mtotal;
 
 % Adiabatic energy balance: h_products(T4) = h3mix
 switch method
@@ -83,7 +86,7 @@ switch method
         hthermal_a = Yprod*hia';
         T4 = interp1(hthermal_a,TRl,h3mix);
     case 'bisection'
-        TL = T3; TH = 3000;                                                % combustion only raises the temperature
+        TL = 200; TH = 3000;                                               % T4 must lie between these bounds
         while abs(TH-TL) > 0.01
             Ti = (TL+TH)/2;
             for i=1:NSp

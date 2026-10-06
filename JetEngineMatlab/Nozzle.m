@@ -19,11 +19,13 @@ function [T6,P6,v6,h5,h6,S5,S6] = Nozzle(T5,P5,v5,SpS,Yprod,Pamb,method,Runiv,Pr
 %     T6,P6   - exit temperature/pressure (P6 = Pamb)
 %     v6      - exit velocity [m/s]
 %     h5,h6   - inlet/exit specific enthalpy [J/kg]
-%     S5,S6   - inlet/exit total specific entropy [J/kg/K]
+%     S5,S6   - inlet/exit total specific entropy, incl. entropy of
+%               mixing [J/kg/K]
 
 NSp = length(SpS);
 Mi  = [SpS.Mass];
 Rg  = Runiv*sum(Yprod./Mi);                                                % Mixture gas constant: 1/Mmix = sum(Y_i/M_i)
+smix = MixingEntropy(Yprod,Mi,Runiv);                                      % Entropy of mixing (constant: composition does not change)
 
 P6 = Pamb;
 
@@ -39,9 +41,9 @@ for i=1:NSp
 end
 h5 = Yprod*hi5';
 s5thermal = Yprod*si5';
-S5 = s5thermal - Rg*log(P5/Pref);
+S5 = s5thermal - Rg*log(P5/Pref) + smix;
 
-% Isentropic assumption: s6thermal(T6) - s5thermal(T5) = Rg*log(P6/P5)
+% Isentropic assumption (S6 = S5, smix cancels): s6thermal(T6) - s5thermal(T5) = Rg*log(P6/P5)
 starget = s5thermal + Rg*log(P6/P5);
 switch method
     case 'interp'
@@ -76,7 +78,7 @@ for i=1:NSp
 end
 h6 = Yprod*hi6';
 s6thermal = Yprod*si6';
-S6 = s6thermal - Rg*log(P6/Pref);
+S6 = s6thermal - Rg*log(P6/Pref) + smix;
 
 % Energy balance: h5 + 0.5*v5^2 = h6 + 0.5*v6^2
 v6 = sqrt(v5^2 + 2*(h5-h6));

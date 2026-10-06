@@ -22,11 +22,13 @@ function [T5,P5,h4,h5,S4,S5] = Turbine(T4,P4,SpS,Yprod,Wc,mfratio,method,Runiv,P
 %   Output:
 %     T5,P5    - exit temperature/pressure
 %     h4,h5    - inlet/exit specific enthalpy [J/kg]
-%     S4,S5    - inlet/exit total specific entropy [J/kg/K]
+%     S4,S5    - inlet/exit total specific entropy, incl. entropy of
+%                mixing [J/kg/K]
 
 NSp = length(SpS);
 Mi  = [SpS.Mass];
 Rg  = Runiv*sum(Yprod./Mi);                                                % Mixture gas constant: 1/Mmix = sum(Y_i/M_i)
+smix = MixingEntropy(Yprod,Mi,Runiv);                                      % Entropy of mixing (constant: composition does not change)
 
 %% Debug: everything going INTO this stage
 fprintf('\n[Turbine 4-5] ---- inputs ----\n');
@@ -41,7 +43,7 @@ for i=1:NSp
 end
 h4 = Yprod*hi4';
 s4thermal = Yprod*si4';
-S4 = s4thermal - Rg*log(P4/Pref);
+S4 = s4thermal - Rg*log(P4/Pref) + smix;
 
 % Power balance: turbine work (per kg gas) = compressor work (per kg air)
 Wt = Wc/mfratio;
@@ -80,10 +82,10 @@ for i=1:NSp
     si5(i) = SNasa(T5,SpS(i));
 end
 s5thermal = Yprod*si5';
-% Isentropic assumption: s5thermal - s4thermal = Rg*log(P5/P4)
+% Isentropic assumption (S5 = S4, smix cancels): s5thermal - s4thermal = Rg*log(P5/P4)
 lnPr = (s5thermal-s4thermal)/Rg;
 P5 = P4*exp(lnPr);
-S5 = s5thermal - Rg*log(P5/Pref);
+S5 = s5thermal - Rg*log(P5/Pref) + smix;
 
 %% Debug: everything coming OUT of this stage
 fprintf('[Turbine 4-5] ---- outputs ----\n');

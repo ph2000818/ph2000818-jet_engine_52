@@ -10,7 +10,8 @@ load(TdataBase);
 %% values should not be changed. These are used by all Nasa Functions. 
 global Runiv Pref
 Runiv=8.314472;
-Pref=1.01235e5; % Reference pressure, 1 atm!
+Pref=1e5;       % Reference pressure = standard-state pressure of the NASA polynomials (1 bar)
+                % (template had 1.01235e5 "1 atm"; the s0 of H2,O2,CO2,H2O in the database match 1 bar data)
 Tref=298.15;    % Reference Temperature
 %% Some convenient units
 kJ=1e3;kmol=1e3;dm=0.1;bara=1e5;kPa = 1000;kN=1000;kg=1;s=1;
@@ -31,16 +32,24 @@ mfurate  = Case.mfurate;                                                    % Fu
 AF       = Case.AF;                                                         % Air-to-fuel mass ratio [-]
 v1       = Case.v1;                                                         % Inlet (flight) velocity [m/s]
 
+% Fuel supply temperature: not in the case file, the fuel is assumed to be
+% delivered to the combustor at ambient temperature
+Tfuel    = Tamb;                                                            % Fuel temperature at combustor inlet [K]
+
 % Fuel elemental composition CxHy, needed by Combustor.m for the
-% combustion stoichiometry. Add a case here if you ever change fuel.
-switch cFuel
-    case 'Gasoline'
-        nCfuel = 8;  nHfuel = 18;                                           % isooctane C8H18 surrogate
-    case 'H2'
-        nCfuel = 0;  nHfuel = 2;                                            % hydrogen
-    otherwise
-        error('Assignment:UnknownFuel','No combustion stoichiometry (nC,nH) defined for fuel "%s"',cFuel);
+% combustion stoichiometry. Read from the fuel's own database entry
+% (Sp.Elcomp, element order given by El) so it always matches the molar
+% mass and polynomials used, e.g. 'Gasoline' is C7.76H13.1, not C8H18.
+iFuel = find(strcmp({Sp.Name},cFuel),1);
+if isempty(iFuel)
+    error('Assignment:UnknownFuel','Fuel "%s" not found in the NASA database (Sp.Name)',cFuel);
 end
+cEl = {El.Name};
+if any(Sp(iFuel).Elcomp(~ismember(cEl,{'C','H'})))
+    error('Assignment:FuelNotCxHy','Combustor.m assumes a CxHy fuel, but "%s" contains other elements',cFuel);
+end
+nCfuel = Sp(iFuel).Elcomp(strcmp(cEl,'C'));                                 % C atoms per fuel molecule
+nHfuel = Sp(iFuel).Elcomp(strcmp(cEl,'H'));                                 % H atoms per fuel molecule
 
 % Print every exported value so it's clear at a glance what case is loaded.
 fprintf('\n%14s\n','Exported case data');
@@ -53,8 +62,9 @@ fprintf('%12s: %10.4f  [Pa]\n','Pamb',Pamb);
 fprintf('%12s: %10.4f  [kg/s]\n','mfurate',mfurate);
 fprintf('%12s: %10.4f  [-]\n','AF',AF);
 fprintf('%12s: %10.4f  [m/s]\n','v1',v1);
-fprintf('%12s: %10d  [-]\n','nCfuel',nCfuel);
-fprintf('%12s: %10d  [-]\n','nHfuel',nHfuel);
+fprintf('%12s: %10.4f  [K]\n','Tfuel',Tfuel);
+fprintf('%12s: %10g  [-]\n','nCfuel',nCfuel);
+fprintf('%12s: %10g  [-]\n','nHfuel',nHfuel);
 fprintf('-------------------------------------------------\n\n');
 %% ============================================================
 %% Select species for the case at hand
@@ -66,6 +76,7 @@ Mi = [SpS.Mass];
 Xair = [0 0.21 0 0 0.79];                                                   % Order is important. Note that these are molefractions
 MAir = Xair*Mi';                                                            % Row times Column = inner product 
 Yair = Xair.*Mi/MAir;                                                       % Vector. times vector is Matlab's way of making an elementwise multiplication
+sMixAir = MixingEntropy(Yair,Mi,Runiv);                                     % Entropy of mixing of air, -sum(Y_i*R_i*ln(X_i)) [J/kg/K]
 %% Fuel composition
 Yfuel = [1 0 0 0 0];                                                        % Only fuel
 %% Range of enthalpies/thermal part of entropy of species
@@ -106,8 +117,8 @@ s2thermal = Yair*si2';
 lnPr = (s2thermal-s1thermal)/Rg;                                            % ln(P2/P1) = (s2-s1)/Rg , see lecture (s2 are only the temperature integral part of th eentropy)
 Pr = exp(lnPr);
 P2 = P1*Pr;
-S1  = s1thermal - Rg*log(P1/Pref);                                          % Total specific entropy
-S2  = s2thermal - Rg*log(P2/Pref);
+S1  = s1thermal - Rg*log(P1/Pref) + sMixAir;                                % Total specific entropy (incl. entropy of mixing)
+S2  = s2thermal - Rg*log(P2/Pref) + sMixAir;
 % Print to screen
 fprintf('\n%14s\n',cMethod);
 fprintf('Stage  ||%14s        [unit]\n      NR|%9i %9i\n',sPart,1,2);
@@ -164,8 +175,8 @@ s2thermal = Yair*si2';
 lnPr = (s2thermal-s1thermal)/Rg;                                            % ln(P2/P1) = (s2-s1)/Rg , see lecture (s2 are only the temperature integral)
 Pr = exp(lnPr);
 P2 = P1*Pr;
-S1  = s1thermal - Rg*log(P1/Pref);                                          % Total entropy stage 1
-S2  = s2thermal - Rg*log(P2/Pref);                                          % Total entropy stage 2
+S1  = s1thermal - Rg*log(P1/Pref) + sMixAir;                                % Total entropy stage 1 (incl. entropy of mixing)
+S2  = s2thermal - Rg*log(P2/Pref) + sMixAir;                                % Total entropy stage 2 (incl. entropy of mixing)
 % Print to screen
 fprintf('\n%14s\n',cMethod);
 fprintf('Stage  ||%14s        [unit]\n      NR|%9i %9i\n',sPart,1,2);
@@ -189,7 +200,7 @@ v3 = v2;                                                                    % Ve
 %% [3-4] Combustor
 dPloss = 0;                                                                 % TODO: set a pressure loss fraction if the case requires it
 v4 = v3;                                                                    % No velocity change across the combustor
-[T4,P4,Yprod,h3mix,h4] = Combustor(T3,P3,SpS,Yair,Yfuel,AF,dPloss,method,nCfuel,nHfuel);   % h3mix: air+fuel mixture, not the compressor's h3
+[T4,P4,Yprod,h3mix,h4] = Combustor(T3,P3,Tfuel,SpS,Yair,Yfuel,AF,dPloss,method,nCfuel,nHfuel);   % h3mix: air (T3) + fuel (Tfuel) reactants, not the compressor's h3
 
 %% [4-5] Turbine
 v5 = v4;                                                                    % Turbine.m's energy balance assumes no kinetic energy change (v5 = v4)
@@ -217,6 +228,16 @@ Pprop  = F*v1;                                                              % Pr
 eta_th   = dEkin/Qin;                                                       % Thermal efficiency
 eta_prop = Pprop/dEkin;                                                     % Propulsive efficiency
 eta_tot  = Pprop/Qin;                                                       % Overall efficiency = eta_th*eta_prop
+% Entropy generated in the combustor, the only irreversible stage. Entropy
+% balance (steady, adiabatic): Sgen = mgas*S4 - mair*S3 - mfurate*Sfuel.
+% S3 (per kg air) and S4 (per kg gas) include the entropy of mixing; the
+% fuel is pure and assumed to be injected at Tfuel and combustor pressure P3.
+for i=1:NSp
+    siF(i) = SNasa(Tfuel,SpS(i));
+end
+RgFuel = Runiv*sum(Yfuel./Mi);
+Sfuel  = Yfuel*siF' - RgFuel*log(P3/Pref) + MixingEntropy(Yfuel,Mi,Runiv);  % [J/kg fuel/K] (mixing term is 0 for a pure fuel)
+Sgen   = mgas*S4 - mair*S3 - mfurate*Sfuel;                                 % Entropy generation rate [W/K]
 
 %% Print overview of all stations
 fprintf('\n%14s\n','Full cycle');
@@ -228,7 +249,8 @@ fprintf('%8s| %9.2f %9.2f %9.2f %9.2f %9.2f %9.2f  [m/s]\n','v',v1,v2,v3,v4,v5,v
 fprintf('---  H/S    -------------------------------------------------------\n');
 fprintf('%8s| %9.2f %9.2f %9.2f %9.2f %9.2f %9.2f  [kJ/kg]\n','h',h1/kJ,h2/kJ,h3/kJ,h4/kJ,h5/kJ,h6/kJ);
 fprintf('%8s| %9.4f %9.4f %9.4f %9.4f %9.4f %9.4f  [kJ/kg/K]\n','Total S',S1/kJ,S2/kJ,S3/kJ,S4/kJ,S5/kJ,S6/kJ);
-fprintf('  (h,S at stations 1-3 are per kg air, 4-6 per kg combustion gas)\n');
+fprintf('  (h,S at stations 1-3 are per kg air, 4-6 per kg combustion gas,\n');
+fprintf('   so S3->S4 is NOT the combustor entropy generation: see Sgen below)\n');
 
 %% Print engine performance
 fprintf('\n%14s\n','Performance');
@@ -243,4 +265,6 @@ fprintf('%12s: %10.4f  [g/(kN s)]\n','TSFC',TSFC*1e6);
 fprintf('%12s: %10.4f  [-]\n','eta_th',eta_th);
 fprintf('%12s: %10.4f  [-]\n','eta_prop',eta_prop);
 fprintf('%12s: %10.4f  [-]\n','eta_tot',eta_tot);
+fprintf('%12s: %10.4f  [kW/K]\n','Sgen comb',Sgen/kJ);
+fprintf('%12s: %10.4f  [kJ/(kg air K)]\n','Sgen/mair',Sgen/mair/kJ);
 fprintf('-------------------------------------------------\n');

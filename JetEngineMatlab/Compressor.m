@@ -17,13 +17,15 @@ function [T3,P3,h2,h3,S2,S3,Wc] = Compressor(T2,P2,v2,v3,SpS,Yair,PRc,method,Run
 %   Output:
 %     T3,P3   - exit temperature/pressure
 %     h2,h3   - inlet/exit specific enthalpy [J/kg]
-%     S2,S3   - inlet/exit total specific entropy [J/kg/K]
+%     S2,S3   - inlet/exit total specific entropy, incl. entropy of
+%               mixing [J/kg/K]
 %     Wc      - specific compressor work [J/kg air],
 %               Wc = (h3-h2) + 0.5*(v3^2-v2^2)
 
 NSp = length(SpS);
 Mi  = [SpS.Mass];
 Rg  = Runiv*sum(Yair./Mi);                                                 % Mixture gas constant: 1/Mmix = sum(Y_i/M_i)
+smix = MixingEntropy(Yair,Mi,Runiv);                                       % Entropy of mixing (constant: composition does not change)
 
 %% Debug: everything going INTO this stage
 fprintf('\n[Compressor 2-3] ---- inputs ----\n');
@@ -42,9 +44,9 @@ for i=1:NSp
 end
 h2 = Yair*hi2';
 s2thermal = Yair*si2';
-S2 = s2thermal - Rg*log(P2/Pref);
+S2 = s2thermal - Rg*log(P2/Pref) + smix;
 
-% Isentropic assumption: s3thermal(T3) - s2thermal(T2) = Rg*log(P3/P2)
+% Isentropic assumption (S3 = S2, smix cancels): s3thermal(T3) - s2thermal(T2) = Rg*log(P3/P2)
 starget = s2thermal + Rg*log(P3/P2);
 switch method
     case 'interp'
@@ -79,7 +81,7 @@ for i=1:NSp
 end
 h3 = Yair*hi3';
 s3thermal = Yair*si3';
-S3 = s3thermal - Rg*log(P3/Pref);
+S3 = s3thermal - Rg*log(P3/Pref) + smix;
 % Energy balance (adiabatic, work IN): h2 + 0.5*v2^2 + Wc = h3 + 0.5*v3^2
 Wc = (h3-h2) + 0.5*(v3^2-v2^2);
 
