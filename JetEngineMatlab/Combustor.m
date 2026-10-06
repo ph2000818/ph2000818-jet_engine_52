@@ -37,11 +37,14 @@ P4 = P3*(1-dPloss);
 iF=1; iO2=2; iCO2=3; iH2O=4; iN2=5;
 
 %% Debug: everything going INTO this stage
-fprintf('\n[Combustor 3-4] ---- inputs ----\n');
-fprintf('  T3 = %9.4f K     P3 = %11.4f Pa    Tfuel = %9.4f K    dPloss = %.4f     method = %s\n',T3,P3,Tfuel,dPloss,method);
-fprintf('  AF = %9.4f     Fuel formula: C%gH%g   (nC=%g, nH=%g)\n',AF,nC,nH,nC,nH);
-fprintf('  Yair  : '); for i=1:NSp, fprintf('%s=%.4f  ',SpS(i).Name,Yair(i)); end; fprintf('\n');
-fprintf('  Yfuel : '); for i=1:NSp, fprintf('%s=%.4f  ',SpS(i).Name,Yfuel(i)); end; fprintf('\n');
+fprintf('\n[Combustor 3-4] inputs\n');
+PrintVar('T3 (air)',T3,'K');
+PrintVar('Tfuel',Tfuel,'K');
+PrintVar('P3',P3/1e3,'kPa');
+PrintVar('dPloss',dPloss,'-');
+PrintVar('AF',AF,'kg air/kg fuel');
+PrintVar('fuel',sprintf('C%gH%g',nC,nH));
+PrintVar('method',method);
 
 % Stoichiometric combustion: CxHy + (x+y/4) O2 -> x CO2 + (y/2) H2O
 nFuel      = 1/Mi(iF);                                                     % mol fuel per kg fuel
@@ -56,8 +59,16 @@ if nO2ex < 0
     error('Combustor:RichMixture','AF is below the stoichiometric ratio; this model assumes complete (lean) combustion');
 end
 
-fprintf('  Stoichiometry (per kg fuel): nFuel=%.4f  nO2stoich=%.4f  nO2supplied=%.4f  nO2excess=%.4f  nN2=%.4f  [mol]\n', ...
-    nFuel,nO2stoich,nO2in,nO2ex,nN2in);
+AFst = nO2stoich*Mi(iO2)/Yair(iO2);                                        % Stoichiometric air-to-fuel ratio [kg air/kg fuel]
+
+fprintf('  Stoichiometry, per kg fuel:\n');
+PrintVar('n fuel',nFuel,'mol');
+PrintVar('n O2 needed',nO2stoich,'mol');
+PrintVar('n O2 supplied',nO2in,'mol');
+PrintVar('n O2 excess',nO2ex,'mol');
+PrintVar('n N2',nN2in,'mol');
+PrintVar('AF stoichiometric',AFst,'kg air/kg fuel');
+PrintVar('equivalence ratio',AFst/AF,'-');
 
 mtotal = 1+AF;                                                             % kg mixture per kg fuel
 Yprod = zeros(1,NSp);
@@ -66,7 +77,12 @@ Yprod(iCO2) = nCO2*Mi(iCO2)/mtotal;
 Yprod(iH2O) = nH2O*Mi(iH2O)/mtotal;
 Yprod(iN2)  = nN2in*Mi(iN2)/mtotal;
 
-fprintf('  Yprod : '); for i=1:NSp, fprintf('%s=%.4f  ',SpS(i).Name,Yprod(i)); end; fprintf('  (sum=%.4f)\n',sum(Yprod));
+Yreac = (Yfuel*1 + Yair*AF)/mtotal;                                        % Reactant (air+fuel) mass fractions, for printing
+fprintf('  %-22s %10s %10s %10s %10s\n','Mass fractions','air','fuel','reactants','products');
+for i=1:NSp
+    fprintf('  %-22s %10.4f %10.4f %10.4f %10.4f\n',SpS(i).Name,Yair(i),Yfuel(i),Yreac(i),Yprod(i));
+end
+fprintf('  %-22s %10.4f %10.4f %10.4f %10.4f\n','sum',sum(Yair),sum(Yfuel),sum(Yreac),sum(Yprod));
 
 % Reactant enthalpy (per kg of mixture = 1 kg fuel + AF kg air):
 % the air enters at T3 (compressor exit), the fuel at its own temperature Tfuel
@@ -110,8 +126,10 @@ end
 h4 = Yprod*hi4';
 
 %% Debug: everything coming OUT of this stage
-fprintf('[Combustor 3-4] ---- outputs ----\n');
-fprintf('  T4 = %9.4f K     P4 = %11.4f Pa\n',T4,P4);
-fprintf('  h3mix = %9.4f kJ/kg  h4 = %9.4f kJ/kg   (adiabatic: h4 should equal h3mix)\n',h3mix/1e3,h4/1e3);
+fprintf('[Combustor 3-4] outputs\n');
+PrintVar('T4',T4,'K');
+PrintVar('P4',P4/1e3,'kPa');
+PrintVar('h3mix (reactants)',h3mix/1e3,'kJ/kg');
+PrintVar('h4 (products)',h4/1e3,'kJ/kg  (adiabatic: = h3mix)');
 fprintf('---------------------------------------------\n');
 end

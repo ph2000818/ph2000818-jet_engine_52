@@ -52,19 +52,23 @@ nCfuel = Sp(iFuel).Elcomp(strcmp(cEl,'C'));                                 % C 
 nHfuel = Sp(iFuel).Elcomp(strcmp(cEl,'H'));                                 % H atoms per fuel molecule
 
 % Print every exported value so it's clear at a glance what case is loaded.
-fprintf('\n%14s\n','Exported case data');
+fprintf('\nExported case data\n');
 fprintf('-------------------------------------------------\n');
-fprintf('%12s: %s\n','caseFile',caseFile);
-fprintf('%12s: %s\n','cFuel',cFuel);
-fprintf('%12s: %10.4f  [K]\n','Tamb',Tamb);
-fprintf('%12s: %10.4f  [-]\n','P3overP2',P3overP2);
-fprintf('%12s: %10.4f  [Pa]\n','Pamb',Pamb);
-fprintf('%12s: %10.4f  [kg/s]\n','mfurate',mfurate);
-fprintf('%12s: %10.4f  [-]\n','AF',AF);
-fprintf('%12s: %10.4f  [m/s]\n','v1',v1);
-fprintf('%12s: %10.4f  [K]\n','Tfuel',Tfuel);
-fprintf('%12s: %10g  [-]\n','nCfuel',nCfuel);
-fprintf('%12s: %10g  [-]\n','nHfuel',nHfuel);
+PrintVar('caseFile',caseFile);
+PrintVar('cFuel',cFuel);
+PrintVar('Tamb',Tamb,'K');
+PrintVar('P3overP2',P3overP2,'-');
+PrintVar('Pamb',Pamb/kPa,'kPa');
+PrintVar('mfurate',mfurate,'kg/s');
+PrintVar('AF',AF,'kg air/kg fuel');
+PrintVar('v1',v1,'m/s');
+PrintVar('Tfuel',Tfuel,'K');
+PrintVar('nCfuel',nCfuel,'-');
+PrintVar('nHfuel',nHfuel,'-');
+fprintf('Constants\n');
+PrintVar('Runiv',Runiv,'J/(mol K)');
+PrintVar('Pref',Pref/kPa,'kPa');
+PrintVar('Tref',Tref,'K');
 fprintf('-------------------------------------------------\n\n');
 %% ============================================================
 %% Select species for the case at hand
@@ -239,32 +243,33 @@ RgFuel = Runiv*sum(Yfuel./Mi);
 Sfuel  = Yfuel*siF' - RgFuel*log(P3/Pref) + MixingEntropy(Yfuel,Mi,Runiv);  % [J/kg fuel/K] (mixing term is 0 for a pure fuel)
 Sgen   = mgas*S4 - mair*S3 - mfurate*Sfuel;                                 % Entropy generation rate [W/K]
 
-%% Print overview of all stations
-fprintf('\n%14s\n','Full cycle');
-fprintf('Stage  ||%9s %9s %9s %9s %9s %9s\n','1','2','3','4','5','6');
-fprintf('-------------------------------------------------------------------\n');
-fprintf('%8s| %9.2f %9.2f %9.2f %9.2f %9.2f %9.2f  [K]\n','Temp',T1,T2,T3,T4,T5,T6);
-fprintf('%8s| %9.2f %9.2f %9.2f %9.2f %9.2f %9.2f  [kPa]\n','Press',P1/kPa,P2/kPa,P3/kPa,P4/kPa,P5/kPa,P6/kPa);
-fprintf('%8s| %9.2f %9.2f %9.2f %9.2f %9.2f %9.2f  [m/s]\n','v',v1,v2,v3,v4,v5,v6);
-fprintf('---  H/S    -------------------------------------------------------\n');
-fprintf('%8s| %9.2f %9.2f %9.2f %9.2f %9.2f %9.2f  [kJ/kg]\n','h',h1/kJ,h2/kJ,h3/kJ,h4/kJ,h5/kJ,h6/kJ);
-fprintf('%8s| %9.4f %9.4f %9.4f %9.4f %9.4f %9.4f  [kJ/kg/K]\n','Total S',S1/kJ,S2/kJ,S3/kJ,S4/kJ,S5/kJ,S6/kJ);
+%% Print overview of all stations (one row per station)
+cStation = {'1 inlet (ambient)','2 diffusor exit','3 compressor exit','4 combustor exit','5 turbine exit','6 nozzle exit'};
+Tst = [T1 T2 T3 T4 T5 T6];   Pst = [P1 P2 P3 P4 P5 P6];   vst = [v1 v2 v3 v4 v5 v6];
+hst = [h1 h2 h3 h4 h5 h6];   Sst = [S1 S2 S3 S4 S5 S6];
+fprintf('\nFull cycle\n');
+fprintf('%-18s %9s %9s %9s %10s %11s\n','Station','T [K]','P [kPa]','v [m/s]','h [kJ/kg]','S [kJ/kg/K]');
+fprintf('---------------------------------------------------------------------\n');
+for k=1:6
+    fprintf('%-18s %9.2f %9.2f %9.2f %10.2f %11.4f\n',cStation{k},Tst(k),Pst(k)/kPa,vst(k),hst(k)/kJ,Sst(k)/kJ);
+end
+fprintf('---------------------------------------------------------------------\n');
 fprintf('  (h,S at stations 1-3 are per kg air, 4-6 per kg combustion gas,\n');
 fprintf('   so S3->S4 is NOT the combustor entropy generation: see Sgen below)\n');
 
 %% Print engine performance
-fprintf('\n%14s\n','Performance');
+fprintf('\nPerformance\n');
 fprintf('-------------------------------------------------\n');
-fprintf('%12s: %10.4f  [kg/s]\n','mair',mair);
-fprintf('%12s: %10.4f  [kg/s]\n','mgas',mgas);
-fprintf('%12s: %10.4f  [kJ/kg air]\n','Wc',Wc/kJ);
-fprintf('%12s: %10.4f  [MJ/kg fuel]\n','dHcomb',dHcomb/1e6);
-fprintf('%12s: %10.4f  [kN]\n','Thrust F',F/kN);
-fprintf('%12s: %10.4f  [N/(kg/s)]\n','F/mair',Fspec);
-fprintf('%12s: %10.4f  [g/(kN s)]\n','TSFC',TSFC*1e6);
-fprintf('%12s: %10.4f  [-]\n','eta_th',eta_th);
-fprintf('%12s: %10.4f  [-]\n','eta_prop',eta_prop);
-fprintf('%12s: %10.4f  [-]\n','eta_tot',eta_tot);
-fprintf('%12s: %10.4f  [kW/K]\n','Sgen comb',Sgen/kJ);
-fprintf('%12s: %10.4f  [kJ/(kg air K)]\n','Sgen/mair',Sgen/mair/kJ);
+PrintVar('mair',mair,'kg/s');
+PrintVar('mgas',mgas,'kg/s');
+PrintVar('Wc',Wc/kJ,'kJ/kg air');
+PrintVar('dHcomb (LHV)',dHcomb/1e6,'MJ/kg fuel');
+PrintVar('Thrust F',F/kN,'kN');
+PrintVar('F/mair',Fspec,'N/(kg/s)');
+PrintVar('TSFC',TSFC*1e6,'g/(kN s)');
+PrintVar('eta_th',eta_th,'-');
+PrintVar('eta_prop',eta_prop,'-');
+PrintVar('eta_tot',eta_tot,'-');
+PrintVar('Sgen combustor',Sgen/kJ,'kW/K');
+PrintVar('Sgen/mair',Sgen/mair/kJ,'kJ/(kg air K)');
 fprintf('-------------------------------------------------\n');

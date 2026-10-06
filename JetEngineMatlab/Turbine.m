@@ -31,11 +31,13 @@ Rg  = Runiv*sum(Yprod./Mi);                                                % Mix
 smix = MixingEntropy(Yprod,Mi,Runiv);                                      % Entropy of mixing (constant: composition does not change)
 
 %% Debug: everything going INTO this stage
-fprintf('\n[Turbine 4-5] ---- inputs ----\n');
-fprintf('  T4 = %9.4f K     P4 = %11.4f Pa    method = %s\n',T4,P4,method);
-fprintf('  Wc = %9.4f kJ/kg air   mfratio(gas/air) = %.4f\n',Wc/1e3,mfratio);
-fprintf('  Runiv = %.6f J/mol/K   Pref = %.4f Pa   Rg = %.6f J/kg/K\n',Runiv,Pref,Rg);
-fprintf('  Yprod : '); for i=1:NSp, fprintf('%s=%.4f  ',SpS(i).Name,Yprod(i)); end; fprintf('\n');
+fprintf('\n[Turbine 4-5] inputs\n');
+PrintVar('T4',T4,'K');
+PrintVar('P4',P4/1e3,'kPa');
+PrintVar('Wc',Wc/1e3,'kJ/kg air');
+PrintVar('mfratio (gas/air)',mfratio,'-');
+PrintVar('method',method);
+PrintVar('Rg (gas)',Rg,'J/(kg K)');
 
 for i=1:NSp
     hi4(i) = HNasa(T4,SpS(i));
@@ -48,7 +50,7 @@ S4 = s4thermal - Rg*log(P4/Pref) + smix;
 % Power balance: turbine work (per kg gas) = compressor work (per kg air)
 Wt = Wc/mfratio;
 h5 = h4-Wt;
-fprintf('  Wt = %9.4f kJ/kg gas   (Wc/mfratio)     h4 = %9.4f kJ/kg   h5(target) = %9.4f kJ/kg\n',Wt/1e3,h4/1e3,h5/1e3);
+PrintVar('Wt = Wc/mfratio',Wt/1e3,'kJ/kg gas');
 
 % Solve T5 from the energy balance: Yprod*HNasa(T5,SpS)' = h5
 switch method
@@ -88,9 +90,12 @@ P5 = P4*exp(lnPr);
 S5 = s5thermal - Rg*log(P5/Pref) + smix;
 
 %% Debug: everything coming OUT of this stage
-fprintf('[Turbine 4-5] ---- outputs ----\n');
-fprintf('  T5 = %9.4f K     P5 = %11.4f Pa\n',T5,P5);
-fprintf('  h4 = %9.4f kJ/kg  h5 = %9.4f kJ/kg\n',h4/1e3,h5/1e3);
-fprintf('  S4 = %9.4f kJ/kg/K  S5 = %9.4f kJ/kg/K\n',S4/1e3,S5/1e3);
+fprintf('[Turbine 4-5] outputs\n');
+PrintVar('T5',T5,'K');
+PrintVar('P5',P5/1e3,'kPa');
+PrintVar('h4',h4/1e3,'kJ/kg');
+PrintVar('h5 = h4 - Wt',h5/1e3,'kJ/kg');
+PrintVar('S4',S4/1e3,'kJ/(kg K)');
+PrintVar('S5',S5/1e3,'kJ/(kg K)');
 fprintf('---------------------------------------------\n');
 end

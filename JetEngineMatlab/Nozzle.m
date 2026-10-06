@@ -30,10 +30,13 @@ smix = MixingEntropy(Yprod,Mi,Runiv);                                      % Ent
 P6 = Pamb;
 
 %% Debug: everything going INTO this stage
-fprintf('\n[Nozzle 5-6] ---- inputs ----\n');
-fprintf('  T5 = %9.4f K     P5 = %11.4f Pa    v5 = %8.4f m/s    Pamb(=P6) = %11.4f Pa    method = %s\n',T5,P5,v5,Pamb,method);
-fprintf('  Runiv = %.6f J/mol/K   Pref = %.4f Pa   Rg = %.6f J/kg/K\n',Runiv,Pref,Rg);
-fprintf('  Yprod : '); for i=1:NSp, fprintf('%s=%.4f  ',SpS(i).Name,Yprod(i)); end; fprintf('\n');
+fprintf('\n[Nozzle 5-6] inputs\n');
+PrintVar('T5',T5,'K');
+PrintVar('P5',P5/1e3,'kPa');
+PrintVar('v5',v5,'m/s');
+PrintVar('P6 = Pamb',Pamb/1e3,'kPa');
+PrintVar('method',method);
+PrintVar('Rg (gas)',Rg,'J/(kg K)');
 
 for i=1:NSp
     hi5(i) = HNasa(T5,SpS(i));
@@ -84,9 +87,13 @@ S6 = s6thermal - Rg*log(P6/Pref) + smix;
 v6 = sqrt(v5^2 + 2*(h5-h6));
 
 %% Debug: everything coming OUT of this stage
-fprintf('[Nozzle 5-6] ---- outputs ----\n');
-fprintf('  T6 = %9.4f K     P6 = %11.4f Pa    v6 = %9.4f m/s\n',T6,P6,v6);
-fprintf('  h5 = %9.4f kJ/kg  h6 = %9.4f kJ/kg\n',h5/1e3,h6/1e3);
-fprintf('  S5 = %9.4f kJ/kg/K  S6 = %9.4f kJ/kg/K\n',S5/1e3,S6/1e3);
+fprintf('[Nozzle 5-6] outputs\n');
+PrintVar('T6',T6,'K');
+PrintVar('P6',P6/1e3,'kPa');
+PrintVar('v6',v6,'m/s');
+PrintVar('h5',h5/1e3,'kJ/kg');
+PrintVar('h6',h6/1e3,'kJ/kg');
+PrintVar('S5',S5/1e3,'kJ/(kg K)');
+PrintVar('S6',S6/1e3,'kJ/(kg K)');
 fprintf('---------------------------------------------\n');
 end

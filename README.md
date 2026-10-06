@@ -19,6 +19,8 @@ or modified independently:
   and the exit velocity `v6`
 - `MixingEntropy.m` — small helper returning the entropy of mixing of a
   gas mixture, used for the total entropies `S`
+- `PrintVar.m` — small helper printing one quantity per line (name,
+  value, unit), so all console output is a vertical, aligned list
 
 Each of these takes every value it needs as a function argument (no
 `global`s), so one person can work on `Turbine.m` without needing to know
@@ -95,9 +97,11 @@ Sfuel = sthermal_fuel(Tfuel) - Rfuel*ln(P3/Pref)     (pure fuel injected at P3)
 The combustor is the only irreversible stage. The jump in the `S` column
 from station 3 to 4 is not its entropy generation, because `S3` is per kg
 air and `S4` per kg gas and the fuel's entropy is not in `S3`; use `Sgen`.
-The final table prints T, P, v, h and S for every station, followed by
-the performance block. h and S at stations 1-3 are per kg air, at 4-6
-per kg combustion gas.
+The final table prints one row per station (T, P, v, h and S), followed
+by the performance block. h and S at stations 1-3 are per kg air, at 4-6
+per kg combustion gas. Each stage also prints its inputs and outputs as
+a vertical list; the combustor adds the stoichiometry, the equivalence
+ratio and a mass-fraction table (air, fuel, reactants, products).
 
 Each "solve for T" step is done with either `interp1` on a precomputed
 h(T) or s(T) table, or bisection — selected by the `method` variable in

@@ -28,13 +28,15 @@ Rg  = Runiv*sum(Yair./Mi);                                                 % Mix
 smix = MixingEntropy(Yair,Mi,Runiv);                                       % Entropy of mixing (constant: composition does not change)
 
 %% Debug: everything going INTO this stage
-fprintf('\n[Compressor 2-3] ---- inputs ----\n');
-fprintf('  T2 = %9.4f K     P2 = %11.4f Pa    v2 = %8.4f m/s   v3 = %8.4f m/s\n',T2,P2,v2,v3);
-fprintf('  PRc(P3/P2) = %8.4f     method = %s\n',PRc,method);
-fprintf('  Runiv = %.6f J/mol/K   Pref = %.4f Pa   Rg = %.6f J/kg/K\n',Runiv,Pref,Rg);
-fprintf('  Yair : ');
-for i=1:NSp, fprintf('%s=%.4f  ',SpS(i).Name,Yair(i)); end
-fprintf('\n');
+fprintf('\n[Compressor 2-3] inputs\n');
+PrintVar('T2',T2,'K');
+PrintVar('P2',P2/1e3,'kPa');
+PrintVar('v2',v2,'m/s');
+PrintVar('v3',v3,'m/s');
+PrintVar('P3/P2',PRc,'-');
+PrintVar('method',method);
+PrintVar('Rg (air)',Rg,'J/(kg K)');
+for i=find(Yair>0), PrintVar(['Y ' SpS(i).Name],Yair(i),'-'); end
 
 P3 = P2*PRc;
 
@@ -86,10 +88,14 @@ S3 = s3thermal - Rg*log(P3/Pref) + smix;
 Wc = (h3-h2) + 0.5*(v3^2-v2^2);
 
 %% Debug: everything coming OUT of this stage
-fprintf('[Compressor 2-3] ---- outputs ----\n');
-fprintf('  starget = %.6f kJ/kg/K   (s2thermal + Rg*ln(P3/P2))\n',starget/1e3);
-fprintf('  T3 = %9.4f K     P3 = %11.4f Pa\n',T3,P3);
-fprintf('  h2 = %9.4f kJ/kg  h3 = %9.4f kJ/kg  Wc = %9.4f kJ/kg\n',h2/1e3,h3/1e3,Wc/1e3);
-fprintf('  S2 = %9.4f kJ/kg/K  S3 = %9.4f kJ/kg/K\n',S2/1e3,S3/1e3);
+fprintf('[Compressor 2-3] outputs\n');
+PrintVar('s0(T3) target',starget/1e3,'kJ/(kg K)');                         % s2thermal + Rg*ln(P3/P2)
+PrintVar('T3',T3,'K');
+PrintVar('P3',P3/1e3,'kPa');
+PrintVar('h2',h2/1e3,'kJ/kg');
+PrintVar('h3',h3/1e3,'kJ/kg');
+PrintVar('Wc',Wc/1e3,'kJ/kg air');
+PrintVar('S2',S2/1e3,'kJ/(kg K)');
+PrintVar('S3',S3/1e3,'kJ/(kg K)');
 fprintf('---------------------------------------------\n');
 end
