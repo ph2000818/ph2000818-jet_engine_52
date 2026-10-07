@@ -1,5 +1,5 @@
 clear all;close all;clc;
-warning off
+
 %% To make sure that matlab will find the functions. You must change it to your situation 
 relativepath_to_generalfolder='General'; % relative reference to General folder (assumes the folder is in you working folder)
 addpath(relativepath_to_generalfolder); 
@@ -21,7 +21,7 @@ kJ=1e3;kmol=1e3;dm=0.1;bara=1e5;kPa = 1000;kN=1000;kg=1;s=1;
 %  named variables used throughout the rest of the script. To run a
 %  different case, point caseFile at a different Groep0XX.txt - nothing
 %  else in this script needs to change.
-caseFile = 'Groep052.txt';
+caseFile = fullfile(projectDir,'Groep052.txt');
 Case = ReadCaseData(caseFile);
 
 cFuel    = Case.Fuel;                                                       % Fuel name (must match an entry in Sp.Name)
