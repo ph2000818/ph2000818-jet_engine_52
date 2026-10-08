@@ -1,4 +1,4 @@
-function [T3,P3,h2,h3,S2,S3,Wc] = Compressor(T2,P2,v2,v3,SpS,Yair,PRc,method,Runiv,Pref)
+function [T3,P3,h2,h3,S2,S3,Wc] = compressor(T2,P2,v2,v3,SpS,Yair,PRc,method,Runiv,Pref)
 %COMPRESSOR  Station [2-3]: adiabatic compression of air
 %   Mirrors the Diffusor example in Assignment.m (interpolation/bisection
 %   on the entropy relation), but here P3 is known (P3 = P2*PRc) and T3 is
